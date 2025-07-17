@@ -16,14 +16,16 @@ namespace WpfGifControl;
 
 public class GifControl : Control
 {
+	#region Private fields
+
 	private readonly Grid _root = new();
-	private GifVisualHandler? _gifHandler;
 	private double _gifWidth, _gifHeight;
 	private IterationCount _lastIterationCount;
+	private GifVisualHandler? _gifHandler;
 	private Stream? _lastSourceStream;
 	private MemoryStream? _lastMemoryFromStream = new();
 
-	private readonly ProgressBar? _spinner = new()
+	private readonly ProgressBar _spinner = new()
 	{
 			IsIndeterminate = true,
 			Height = 20,
@@ -32,6 +34,10 @@ public class GifControl : Control
 			Foreground = new SolidColorBrush(Color.FromRgb(2, 169, 244)),
 			Margin = new Thickness(20, 0, 20, 0)
 	};
+
+	#endregion
+
+	#region Dependency Properties
 
 	public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
 			nameof(Source), typeof(object), typeof(GifControl),
@@ -66,7 +72,7 @@ public class GifControl : Control
 
 	public static readonly DependencyProperty IterationCountProperty = DependencyProperty.Register(
 			nameof(IterationCount), typeof(IterationCount), typeof(GifControl),
-			new PropertyMetadata(default(IterationCount)));
+			new PropertyMetadata(IterationCount.Infinite));
 
 	public IterationCount IterationCount
 	{
@@ -74,17 +80,55 @@ public class GifControl : Control
 		set => SetValue(IterationCountProperty, value);
 	}
 
+	public static readonly DependencyProperty SpinnerBackgroundProperty = DependencyProperty.Register(
+			nameof(SpinnerBackground), typeof(Brush), typeof(GifControl),
+			new PropertyMetadata(default(Brush), OnSpinnerBackgroundChanged));
+
+	public Brush SpinnerBackground
+	{
+		get => (Brush)GetValue(SpinnerBackgroundProperty);
+		set => SetValue(SpinnerBackgroundProperty, value);
+	}
+
+	public static readonly DependencyProperty SpinnerForegroundProperty = DependencyProperty.Register(
+			nameof(SpinnerForeground), typeof(Brush), typeof(GifControl),
+			new PropertyMetadata(default(Brush), OnSpinnerForegroundChanged));
+
+	public Brush SpinnerForeground
+	{
+		get => (Brush)GetValue(SpinnerForegroundProperty);
+		set => SetValue(SpinnerForegroundProperty, value);
+	}
+
+	public static readonly DependencyProperty SpinnerTemplateProperty = DependencyProperty.Register(
+			nameof(SpinnerTemplate), typeof(ControlTemplate), typeof(GifControl),
+			new PropertyMetadata(default(ControlTemplate), OnSpinnerTemplateChanged));
+
+	public ControlTemplate SpinnerTemplate
+	{
+		get => (ControlTemplate)GetValue(SpinnerTemplateProperty);
+		set => SetValue(SpinnerTemplateProperty, value);
+	}
+
+	#endregion
+
+	#region Routed Events
+
 	public static readonly RoutedEvent LoadFailedEvent = EventManager.RegisterRoutedEvent(
-			name: nameof(LoadFailed),
-			routingStrategy: RoutingStrategy.Bubble,
-			handlerType: typeof(RoutedEventHandler),
-			ownerType: typeof(GifControl));
+			nameof(LoadFailed),
+			RoutingStrategy.Bubble,
+			typeof(RoutedEventHandler),
+			typeof(GifControl));
 
 	public event RoutedEventHandler LoadFailed
 	{
 		add => AddHandler(LoadFailedEvent, value);
 		remove => RemoveHandler(LoadFailedEvent, value);
 	}
+
+	#endregion
+
+	#region Public methods
 
 	public void BeginReplay()
 	{
@@ -106,6 +150,13 @@ public class GifControl : Control
 	public void EndReplay()
 	{
 		IterationCount = _lastIterationCount;
+
+		if (!IterationCount.IsInfinite && IterationCount.Value > _gifHandler?.CurrentIterationCount.Value)
+		{
+			_gifHandler.SendMessage(new GifDrawPayload() { HandlerCommand = HandlerCommand.Resume });
+			return;
+		}
+
 		Stop();
 	}
 
@@ -114,10 +165,16 @@ public class GifControl : Control
 		_gifHandler?.SendMessage(new GifDrawPayload(HandlerCommand.Stop));
 	}
 
-	// Override the visual tree to include handler
+	#endregion
+
+	#region Overrides
+
 	protected override int VisualChildrenCount => 1;
 
-	protected override Visual GetVisualChild(int index) => _root;
+	protected override Visual GetVisualChild(int index)
+	{
+		return _root;
+	}
 
 	protected override Size MeasureOverride(Size constraint)
 	{
@@ -151,6 +208,8 @@ public class GifControl : Control
 		AddVisualChild(_root);
 	}
 
+	#endregion
+
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private Size GetGifSize()
 	{
@@ -165,6 +224,7 @@ public class GifControl : Control
 
 	private async Task InitGifAsync()
 	{
+		// Clear previous iteration
 		Stop();
 		DisposeImpl();
 
@@ -220,10 +280,7 @@ public class GifControl : Control
 			}
 			case Stream s:
 			{
-				if (_lastMemoryFromStream != null)
-				{
-					await _lastMemoryFromStream.DisposeAsync();
-				}
+				if (_lastMemoryFromStream != null) await _lastMemoryFromStream.DisposeAsync();
 
 				_lastSourceStream = s;
 				_lastMemoryFromStream = new MemoryStream();
@@ -276,10 +333,7 @@ public class GifControl : Control
 
 	private void OnLayoutUpdated(object? sender, EventArgs e)
 	{
-		if (_gifHandler is null)
-			return;
-
-		_gifHandler.SendMessage(
+		_gifHandler?.SendMessage(
 				new GifDrawPayload(
 						HandlerCommand.Update,
 						null,
@@ -289,6 +343,8 @@ public class GifControl : Control
 						StretchDirection,
 						IterationCount));
 	}
+
+	#region PropertyChangedEvent Handlers
 
 	private static async void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 	{
@@ -301,19 +357,43 @@ public class GifControl : Control
 				DispatcherPriority.Background);
 	}
 
+	private static void OnSpinnerBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+	{
+		if (d is not GifControl gifControl)
+			return;
+
+		gifControl._spinner.Background = gifControl.SpinnerBackground;
+	}
+
+	private static void OnSpinnerForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+	{
+		if (d is not GifControl gifControl)
+			return;
+
+		gifControl._spinner.Foreground = gifControl.SpinnerForeground;
+	}
+
+	private static void OnSpinnerTemplateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+	{
+		if (d is not GifControl gifControl)
+			return;
+
+		gifControl._spinner.Template = gifControl.SpinnerTemplate;
+	}
+
+	#endregion
+
 	private void ShowSpinner()
 	{
 		if (_gifHandler != null)
 			RemoveChild(_gifHandler);
 
-		if (_spinner != null)
-			AddChild(_spinner);
+		AddChild(_spinner);
 	}
 
 	private void HideSpinner()
 	{
-		if (_spinner != null)
-			RemoveChild(_spinner);
+		RemoveChild(_spinner);
 	}
 
 	private void AddChild(UIElement element)

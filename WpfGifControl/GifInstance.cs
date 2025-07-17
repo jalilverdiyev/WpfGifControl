@@ -83,7 +83,12 @@ internal class GifInstance : IDisposable
 		return ProcessFrameIndex(currentFrame);
 	}
 
-	public WriteableBitmap? GetLastFrame() => _targetBitmap;
+	public WriteableBitmap? GetLastFrame()
+	{
+		return _targetBitmap;
+	}
+
+	public IterationCount CurrentIterationCount => new(_iterationCount);
 
 	public void Dispose()
 	{

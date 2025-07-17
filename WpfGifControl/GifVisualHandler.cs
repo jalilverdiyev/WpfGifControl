@@ -15,11 +15,12 @@ internal class GifVisualHandler : CustomVisualHandler
 	private bool _isInvalid;
 	private Stretch? _stretch;
 	private StretchDirection? _stretchDirection;
-	private Size _gifSize;
 	private Size _renderSize;
 	private GifInstance? _gifInstance;
 	private TimeSpan _animationElapsed;
 	private TimeSpan _lastServerTime;
+
+	public IterationCount CurrentIterationCount => _gifInstance?.CurrentIterationCount ?? new IterationCount(0);
 
 	protected override void OnMessage(object message)
 	{
@@ -35,7 +36,6 @@ internal class GifVisualHandler : CustomVisualHandler
 					IterationCount: { } iteration,
 					Stretch: { } st,
 					StretchDirection: { } sd,
-					GifSize: { } gifSize,
 					Size: { } renderSize
 			}:
 			{
@@ -46,7 +46,6 @@ internal class GifVisualHandler : CustomVisualHandler
 				_gifInstance.IterationFinished += HandleIterationFinished;
 				_lastServerTime = CompositionNow;
 				_animationElapsed = TimeSpan.Zero;
-				_gifSize = gifSize;
 				_renderSize = renderSize;
 				_running = true;
 				_stretch = st;
@@ -95,6 +94,15 @@ internal class GifVisualHandler : CustomVisualHandler
 			}:
 			{
 				_isInvalid = true;
+				Invalidate();
+				RequestAnimationFrame();
+				break;
+			}
+			case { HandlerCommand: HandlerCommand.Resume }:
+			{
+				_running = true;
+				_isInvalid = false;
+
 				Invalidate();
 				RequestAnimationFrame();
 				break;

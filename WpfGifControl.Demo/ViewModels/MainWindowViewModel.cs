@@ -18,7 +18,7 @@ public class MainWindowViewModel : ViewModelBase
 
 	public IterationCount IterationCount { get; set; } = IterationCount.Infinite;
 
-	public uint SpecialCount { get; set; } = 1;
+	public uint SpecialCount { get; set; } = 5;
 
 	public MainWindowViewModel()
 	{
@@ -79,15 +79,9 @@ public class MainWindowViewModel : ViewModelBase
 		SelectedSourceName = SourceItems[SelectedSource].SourceName;
 	});
 
-	public ICommand CheckInfinite => new RelayCommand(_ =>
-	{
-		IterationCount = IterationCount.Infinite;
-	});
+	public ICommand CheckInfinite => new RelayCommand(_ => { IterationCount = IterationCount.Infinite; });
 
-	public ICommand CheckSpecial => new RelayCommand(_ =>
-	{
-		IterationCount = new IterationCount(SpecialCount);
-	});
+	public ICommand CheckSpecial => new RelayCommand(_ => { IterationCount = new IterationCount(SpecialCount); });
 
 	public ICommand PlayGif => new RelayCommand(res =>
 	{
