@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net9.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Page Update="Views\MainWindow.xaml">
+        <Generator>MSBuild:Compile</Generator>
+        <XamlRuntime>Wpf</XamlRuntime>
+        <SubType>Designer</SubType>
+      </Page>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\WpfGifControl\WpfGifControl.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Resources\Images\scream.gif" />
+      <Resource Include="Resources\Images\scream.gif" />
+      <None Remove="Resources\Images\nonanimated.gif" />
+      <Resource Include="Resources\Images\nonanimated.gif" />
+      <None Remove="Resources\Images\not-gif.png" />
+      <Resource Include="Resources\Images\not-gif.png" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+      <PackageReference Include="PropertyChanged.Fody" Version="4.1.0" />
+    </ItemGroup>
+
+</Project>
